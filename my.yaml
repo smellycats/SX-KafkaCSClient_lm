@@ -1,0 +1,11 @@
+kafka:
+  services: 10.47.223.67:9092, 10.47.223.68:9092, 10.47.223.69:9092
+  topic: cs_lm
+consul:
+  ttl: 30
+  lock_name: kafka-cs-lm-lock
+  path: kafka/cs/lm/
+kakou:
+  name: csLm
+  step: 1000
+  kkdd: '441324000'
