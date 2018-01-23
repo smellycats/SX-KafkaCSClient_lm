@@ -14,7 +14,7 @@ from my_yaml import MyYAML
 from my_logger import *
 
 
-debug_logging('/home/logs/error.log')
+debug_logging('/var/logs/error.log')
 logger = logging.getLogger('root')
 
 
@@ -39,7 +39,7 @@ class UploadData(object):
         self.ttl = dict(self.my_ini['consul'])['ttl']               # 生存周期
         self.lock_name = dict(self.my_ini['consul'])['lock_name']   # 锁名
 
-        self.local_ip = '10.47.223.151'#socket.gethostbyname(socket.gethostname())  # 本地IP
+        self.local_ip = socket.gethostbyname(socket.gethostname())  # 本地IP
         self.maxid = 0
 
     def get_id(self):
