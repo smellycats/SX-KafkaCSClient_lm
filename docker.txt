@@ -1,1 +1,1 @@
-docker run -it -d --net=host --privileged=true --restart=always --name kafka_cs_client_lm -v /home/core/GitHub/kafkaCSClient/SX-KafkaCSClient_lm:/home centos-python3.6/requests:0.5 python3 /home/run.py
+docker run -it -d --net=host --privileged=true --restart=always --name kafka_cs_client_lm -v /var/GitHub/kafkaCSClient/SX-KafkaCSClient_lm:/var -v /home/core/GitHub/kafkaCSClient/SX-KafkaCSClient_lm:/home centos-python3.6/requests:0.5 python3 /home/run.py
