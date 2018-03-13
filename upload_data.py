@@ -14,7 +14,7 @@ from my_yaml import MyYAML
 from my_logger import *
 
 
-debug_logging('/var/logs/error.log')
+debug_logging('/home/logs/error.log')
 logger = logging.getLogger('root')
 
 
@@ -22,6 +22,7 @@ class UploadData(object):
     def __init__(self):
         # 配置文件
         self.my_ini = MyYAML('/home/my.yaml').get_ini()
+        self.flag_ini = MyYAML('/home/flag.yaml')
 
         # request方法类
         self.kk = None
@@ -42,15 +43,28 @@ class UploadData(object):
         self.local_ip = socket.gethostbyname(socket.gethostname())  # 本地IP
         self.maxid = 0
 
-    def get_id(self):
+        self.id_flag = self.flag_ini.get_ini()['id']
+
+    def get_id2(self):
         """获取上传id"""
         r = self.con.get_id()[0]
         return base64.b64decode(r['Value']).decode(), r['ModifyIndex']
 
-    def set_id(self, _id, modify_index):
+    def get_id(self):
+        """获取上传id"""
+        return self.id_flag
+
+    def set_id2(self, _id, modify_index):
         """设置ID"""
         if self.con.put_id(_id, modify_index):
             print(_id)
+
+    def set_id(self, _id, msg=''):
+        """设置ID"""
+        self.id_flag = _id
+        self.flag_ini.set_ini({'id': _id})
+        print(self.id_flag)
+        logger.info('{0} {1}'.format(_id, msg))
 
     def get_lost(self):
         """获取未上传数据id列表"""
@@ -77,11 +91,13 @@ class UploadData(object):
 
     def post_info(self):
         """上传数据"""
-        t, modify_index = self.get_id()
+        #t, modify_index = self.get_id()
+        t = self.get_id()
         st = arrow.get(t).replace(seconds=1).format('YYYY-MM-DD HH:mm:ss')
         et = arrow.get(t).replace(hours=2).format('YYYY-MM-DD HH:mm:ss')
         #et = arrow.now('PRC').replace(minutes=30).format('YYYY-MM-DD HH:mm:ss')
         info = self.kk.get_kakou(st, et, 1, self.step+1)
+        #print(info['total_count'])
         # 如果查询数据为0
         if info['total_count'] == 0:
             return 0
@@ -93,14 +109,15 @@ class UploadData(object):
             value = {'timestamp': arrow.now('PRC').format('YYYY-MM-DD HH:mm:ss'), 'message': i}
             self.ka.produce_info(key='{0}_{0}'.format(self.kk_name, i['id']), value=json.dumps(value))
         self.ka.flush()
-        if len(self.ka.lost_msg) > 0:
-            lost_list = []
-            for i in self.ka.lost_msg:
-                lost_list.append(json.loads(i.value()))
-            self.ka.lost_msg = []
-            self.con.put_lost(json.dumps(lost_list))
+        #if len(self.ka.lost_msg) > 0:
+        #    lost_list = []
+        #    for i in self.ka.lost_msg:
+        #        lost_list.append(json.loads(i.value()))
+        #    self.ka.lost_msg = []
+        #    self.con.put_lost(json.dumps(lost_list))
         # 设置最新ID
-        self.set_id(info['items'][0]['jgsj'], modify_index)
+        #self.set_id(info['items'][0]['jgsj'], modify_index)
+        self.set_id(info['items'][0]['jgsj'])
         return info['total_count']
 
     def get_lock(self):
@@ -143,16 +160,16 @@ class UploadData(object):
 
     def main_loop(self):
         while 1:
-            time.sleep(1)
-            if not self.get_lock():
-                time.sleep(2)
-                continue
+            #time.sleep(1)
+            #if not self.get_lock():
+            #    time.sleep(2)
+            #    continue
             if self.kk is not None and self.kk.status:
                 try:
-                    m = self.post_lost_data()
-                    if m > 0:
-                        time.sleep(0.5)
-                        continue
+                    #m = self.post_lost_data()
+                    #if m > 0:
+                    #    time.sleep(0.5)
+                    #    continue
                     n = self.post_info()
                     if n < self.step:
                         time.sleep(0.5)
