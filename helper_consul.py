@@ -184,3 +184,19 @@ class ConsulAPI(object):
             self.status = False
             raise
 
+    def get_useful_service(self, service):
+        """获取服务信息"""
+        s = self.get_service(service)
+        if len(s) == 0:
+            return None
+        h = self.get_health(service)
+        if len(h) == 0:
+            return None
+        service_status = {}
+        for i in h:
+            service_status[i['ServiceID']] = i['Status']
+        for i in s:
+            if service_status[i['ServiceID']] == 'passing':
+                return {'host': i['ServiceAddress'], 'port': i['ServicePort']}
+        return None
+
