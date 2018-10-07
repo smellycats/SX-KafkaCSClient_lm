@@ -7,7 +7,7 @@ import socket
 import arrow
 
 import helper
-from helper_kakou_cs_lm import Kakou
+from helper_kakou_cs_lm_v2 import Kakou
 from helper_consul import ConsulAPI
 from helper_kafka import KafkaData
 from my_yaml import MyYAML
@@ -76,8 +76,9 @@ class UploadData(object):
         lost_list, modify_index = self.get_lost()
         if len(lost_list) == 0:
             return 0
+        t = arrow.now('PRC').format('YYYY-MM-DD HH:mm:ss')
         for i in lost_list:
-            value = {'timestamp': arrow.now('PRC').format('YYYY-MM-DD HH:mm:ss'), 'message': i['message']}
+            value = {'timestamp': t, 'message': i['message']}
             self.ka.produce_info(key='{0}_{0}'.format(self.kk_name, i['message']['id']), value=json.dumps(value))
             print('lost={0}'.format(i['message']['id']))
         self.ka.flush()
@@ -100,13 +101,17 @@ class UploadData(object):
         #print(info['total_count'])
         # 如果查询数据为0
         if info['total_count'] == 0:
+            mt = self.kk.get_maxtime()['maxtime']
+            if arrow.get(et).timestamp < arrow.get(mt).timestamp:
+                self.set_id(et)
             return 0
 
+        t = arrow.now('PRC').format('YYYY-MM-DD HH:mm:ss')
         for i in info['items']:
             i['cllx'] = 'X99'
             i['csys'] = 'Z'
             i['hpzl'] = helper.hphm2hpzl(i['hphm'], i['hpys_id'], i['hpzl'])
-            value = {'timestamp': arrow.now('PRC').format('YYYY-MM-DD HH:mm:ss'), 'message': i}
+            value = {'timestamp': t, 'message': i}
             self.ka.produce_info(key='{0}_{0}'.format(self.kk_name, i['id']), value=json.dumps(value))
         self.ka.flush()
         #if len(self.ka.lost_msg) > 0:
@@ -142,21 +147,6 @@ class UploadData(object):
             return False
         return l
 
-    def get_service(self, service):
-        """获取服务信息"""
-        s = self.con.get_service(service)
-        if len(s) == 0:
-            return None
-        h = self.con.get_health(service)
-        if len(h) == 0:
-            return None
-        service_status = {}
-        for i in h:
-            service_status[i['ServiceID']] = i['Status']
-        for i in s:
-            if service_status[i['ServiceID']] == 'passing':
-                return {'host': i['ServiceAddress'], 'port': i['ServicePort']}
-        return None
 
     def main_loop(self):
         while 1:
@@ -179,11 +169,11 @@ class UploadData(object):
             else:
                 try:
                     if self.kk is None or not self.kk.status:
-                        s = self.get_service(self.kk_name)
+                        s = self.con.get_useful_service('kong')
                         if s is None:
                             time.sleep(5)
                             continue
-                        self.kk = Kakou(**{'host':s['host'], 'port':s['port']})
+                        self.kk = Kakou(**{'host':s['host'], 'port':s['port'], 'path':dict(self.my_ini['kakou'])['path'], 'apikey':dict(self.my_ini['kakou'])['apikey']})
                         self.kk.status = True
                 except Exception as e:
                     logger.error(e)
